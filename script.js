@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CatwarAlert
-// @version      0.1
+// @version      0.2
 // @description  Скрипт, передающий информацию серверу
 // @author       Ale
 // @match        https://catwar.su/*
@@ -15,17 +15,50 @@ const socket = window.socket;
     const HOST = 'localhost';
     const PORT = 12345;
     const MESSAGES = [];
+    const MAX_STRING_LIMIT = 240;
+    const DEFAULT_URL = `http://localhost:${PORT}/test`;
 
-    function sendContent(content, type='system', kwargs={}) {
-         const XHTTP = new XMLHttpRequest();
-         const MY_URL = new URL(`http://localhost:${PORT}/test`);
-         MY_URL.searchParams.set('type', type);
-         MY_URL.searchParams.set('content', content);
-         for (const keyword in kwargs)
-             MY_URL.searchParams.set(keyword, kwargs[keyword]);
-         XHTTP.open('GET', MY_URL);
-         XHTTP.send();
-     }
+    function sliceURI(URI, start=0, end=MAX_STRING_LIMIT)
+    {
+        let sliced = URI.slice(start, end);
+        let encoded;
+        try
+        {
+            encoded = decodeURI(sliced);
+        }
+        catch (URIError)
+        {
+            [encoded, end] = sliceURI(URI, start, end - 1);
+        }
+        return [encoded, end]
+    }
+
+    async function sendContent(content, type='system', kwargs={}) {
+        const INFO_URL = new URL(DEFAULT_URL);
+        INFO_URL.searchParams.set('type', type);
+        for (const keyword in kwargs)
+            INFO_URL.searchParams.set(keyword, kwargs[keyword]);
+        await fetch(INFO_URL);
+
+        const ENCODED_CONTENT = encodeURI(content);
+        let isEnd = false;
+        let index = 0;
+        while (!isEnd)
+        {
+            const CONTENT_URL = new URL(DEFAULT_URL);
+            let [text, end] = sliceURI(ENCODED_CONTENT, index, index+MAX_STRING_LIMIT)
+            if (end > ENCODED_CONTENT.length)
+                isEnd = true;
+
+            CONTENT_URL.searchParams.set('end', + isEnd);
+            for (const keyword in kwargs)
+                CONTENT_URL.searchParams.set(keyword, kwargs[keyword]);
+            CONTENT_URL.searchParams.set('content', text);
+            await fetch(CONTENT_URL);
+
+            index = end;
+        }
+    }
 
     function formatMessage(message) {
         return `${ message.text } — ${ message.login } [${ message.cat }]`;
@@ -36,25 +69,25 @@ const socket = window.socket;
         return `${ date.toLocaleDateString("ru-RU", { day: 'numeric', month: 'long' }) } в ${ date.toLocaleTimeString("ru-RU", {hour: "numeric", minute: "numeric"}) }`;
     }
 
-    function sendRecentMessages(messages) {
+    async function sendRecentMessages(messages) {
         for (const message of messages) {
             const text = `Старое сообщение от ${ formatTime(message.time) }:\n${ formatMessage(message) }`;
             if (!MESSAGES.includes(message.id)) {
                 MESSAGES.push(message.id);
-                sendContent(text, 'chat', { id: message.id });
+                await sendContent(text, 'chat', { id: message.id });
             }
         }
     }
 
-    function alertAboutMessage(count) {
+    async function alertAboutMessage(count) {
         if (count > 0)
-            sendContent('У вас новое личное сообщение!');
+            await sendContent('У вас новое личное сообщение!');
     }
 
-    function sendMessage(message) {
+    async function sendMessage(message) {
         const text = `${ formatMessage(message) }`;
         MESSAGES.push(message.id);
-        sendContent(text, 'chat', { id: message.id });
+        await sendContent(text, 'chat', { id: message.id });
     }
 
     socket.on('msg load', sendRecentMessages);
