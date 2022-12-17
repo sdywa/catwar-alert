@@ -70,6 +70,8 @@ class Server():
             if (info['end'] == '1'):
                 self.MESSAGES[info['id']]['is_finished'] = True
                 return self.MESSAGES[info['id']]['content']
+        elif 'content' in info:
+            return info['content']
 
     def parse_request(self, request):
         request_info, *_ = request.split(self.SEPARATOR)
