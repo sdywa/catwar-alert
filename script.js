@@ -84,6 +84,17 @@ const socket = window.socket;
             await sendContent('У вас новое личное сообщение!');
     }
 
+    async function alertAboutChat(count) {
+        if (count > 0)
+            await sendContent('Вам написали в чат!');
+    }
+
+    async function alertAboutFight(data) {
+        const ACTION = 27;
+        if (data.dey == ACTION)
+            await sendContent('Вы в боережиме!');
+    }
+
     async function sendMessage(message) {
         const text = `${ formatMessage(message) }`;
         MESSAGES.push(message.id);
@@ -93,4 +104,7 @@ const socket = window.socket;
     socket.on('msg load', sendRecentMessages);
     socket.on('msg', sendMessage);
     socket.on('notRead mess', alertAboutMessage);
+    socket.on('notRead chat', alertAboutChat);
+    socket.on('update', alertAboutFight);
+    socket.on('pick', () => sendContent('Вас подняли!'));
 })();
