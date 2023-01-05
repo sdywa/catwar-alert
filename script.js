@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         CatwarAlert
-// @version      0.2
+// @version      1.0
 // @description  Скрипт, передающий информацию серверу
 // @author       Ale
 // @match        https://catwar.su/*
@@ -15,22 +15,12 @@ const socket = window.socket;
     const HOST = 'localhost';
     const PORT = 12345;
     const MESSAGES = [];
-    const MAX_STRING_LIMIT = 240;
     const DEFAULT_URL = `http://localhost:${PORT}/test`;
 
-    function sliceURI(URI, start=0, end=MAX_STRING_LIMIT)
-    {
-        let sliced = URI.slice(start, end);
-        let encoded;
-        try
-        {
-            encoded = decodeURI(sliced);
-        }
-        catch (URIError)
-        {
-            [encoded, end] = sliceURI(URI, start, end - 1);
-        }
-        return [encoded, end]
+    function prepareData(content) {
+        const element = document.createElement('div');
+        element.innerHTML = content;
+        return JSON.stringify({'content': element.textContent});
     }
 
     async function sendContent(content, type='system', kwargs={}) {
@@ -38,26 +28,11 @@ const socket = window.socket;
         INFO_URL.searchParams.set('type', type);
         for (const keyword in kwargs)
             INFO_URL.searchParams.set(keyword, kwargs[keyword]);
-        await fetch(INFO_URL);
 
-        const ENCODED_CONTENT = encodeURI(content);
-        let isEnd = false;
-        let index = 0;
-        while (!isEnd)
-        {
-            const CONTENT_URL = new URL(DEFAULT_URL);
-            let [text, end] = sliceURI(ENCODED_CONTENT, index, index+MAX_STRING_LIMIT)
-            if (end > ENCODED_CONTENT.length)
-                isEnd = true;
-
-            CONTENT_URL.searchParams.set('end', + isEnd);
-            for (const keyword in kwargs)
-                CONTENT_URL.searchParams.set(keyword, kwargs[keyword]);
-            CONTENT_URL.searchParams.set('content', text);
-            await fetch(CONTENT_URL);
-
-            index = end;
-        }
+        await fetch(INFO_URL, {
+            method: 'POST',
+            body: prepareData(content)
+        });
     }
 
     function formatMessage(message) {
@@ -96,7 +71,7 @@ const socket = window.socket;
     }
 
     async function sendMessage(message) {
-        const text = `${ formatMessage(message) }`;
+        const text = formatMessage(message);
         MESSAGES.push(message.id);
         await sendContent(text, 'chat', { id: message.id });
     }

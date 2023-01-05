@@ -1,3 +1,4 @@
+import json
 import time
 import socket
 import threading
@@ -6,7 +7,7 @@ from urllib.parse import urlparse, parse_qs
 
 class Server(): 
     SEPARATOR = '\r\n'
-    MESSAGES = {}
+    MESSAGES = set()
 
     def __init__(self, host, port, botClass, config):
         self.host = host
@@ -24,7 +25,7 @@ class Server():
             print('Listening on port %s ...' % self.port)
             while True:
                 try:
-                    content = self.receive_message(s)
+                    content = self.get_message(s)
                     if (not content):
                         continue
                     self.send_message(content)
@@ -44,43 +45,34 @@ class Server():
         conn.close()
         return udata
 
-    def read_request(self, socket):
+    def parse_request(self, request):
+        request_info, *headers = request.split(self.SEPARATOR)
+        method, path, *_ = request_info.split(' ')
+        if method != 'POST':
+            return None
+
+        data = headers[-1]
+        data = headers.pop() if data and ': ' not in data else None
+
+        output = urlparse(path)
+        params = parse_qs(output.query)
+        for keyword in params:
+            params[keyword] = params[keyword][0]
+        return params, json.loads(data)
+    
+    def get_message(self, socket):
         conn, addr = socket.accept()
         request = self.recieve_request(conn, addr)
         if not request: 
             return
-        
-        method, params = self.parse_request(request)
-        if method != 'GET':
-            return self.read_request(socket)
-        return params
 
-    def receive_message(self, socket):
-        content = ''
-        info = self.read_request(socket)
-        if 'type' in info and info['type'] == 'chat':
-            if info['id'] in self.MESSAGES and self.MESSAGES[info['id']]['is_finished']:
+        params, data = self.parse_request(request)
+        if 'type' in params and params['type'] == 'chat':
+            if params['id'] in self.MESSAGES:
                 raise Exception('Такое сообщение уже есть!')
             else:
-                self.MESSAGES[info['id']] = {}
-                self.MESSAGES[info['id']]['is_finished'] = False
-                self.MESSAGES[info['id']]['content'] = ''
-        elif 'content' in info and 'end' in info and 'id' in info and not self.MESSAGES[info['id']]['is_finished']:
-            self.MESSAGES[info['id']]['content'] += info['content']
-            if (info['end'] == '1'):
-                self.MESSAGES[info['id']]['is_finished'] = True
-                return self.MESSAGES[info['id']]['content']
-        elif 'content' in info:
-            return info['content']
-
-    def parse_request(self, request):
-        request_info, *_ = request.split(self.SEPARATOR)
-        method, path, *_ = request_info.split(' ')
-        output = urlparse(path)
-        query = parse_qs(output.query)
-        for keyword in query:
-            query[keyword] = query[keyword][0]
-        return method, query
+                self.MESSAGES.add(params['id'])
+        return data['content']
 
     def send_message_forever(self, message):
         try:
