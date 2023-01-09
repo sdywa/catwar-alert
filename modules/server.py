@@ -51,14 +51,14 @@ class Server():
         if method != 'POST':
             return None
 
-        data = headers[-1]
-        data = headers.pop() if data and ': ' not in data else None
-
+        data = headers.pop()
+        if (data):
+            data = json.loads(data)
         output = urlparse(path)
         params = parse_qs(output.query)
         for keyword in params:
             params[keyword] = params[keyword][0]
-        return params, json.loads(data)
+        return params, data
     
     def get_message(self, socket):
         conn, addr = socket.accept()
