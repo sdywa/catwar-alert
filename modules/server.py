@@ -52,7 +52,7 @@ class Server():
             return None
 
         data = headers.pop()
-        if (data):
+        if data:
             data = json.loads(data)
         output = urlparse(path)
         params = parse_qs(output.query)
