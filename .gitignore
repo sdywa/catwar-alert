@@ -1,2 +1,8 @@
 __pycache__/
+
+build/
+dist/
+venv/
+
+main.spec
 config.json
