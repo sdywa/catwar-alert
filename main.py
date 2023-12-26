@@ -50,7 +50,6 @@ if __name__ == '__main__':
 
     FILENAME = 'config.json'
     FILE_PATH = os.path.join(BASE_PATH, FILENAME)
-    print(FILE_PATH)
 
     should_skip = False
     if not os.path.isfile(FILE_PATH):
@@ -69,5 +68,5 @@ if __name__ == '__main__':
             }
         make_config(FILE_PATH, config)
 
-    server = Server('localhost', 12345, Bot, config)
+    server = Server('localhost', 20360, Bot, config)
     server.run()
