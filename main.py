@@ -1,3 +1,4 @@
+import sys
 import os
 import json
 from modules.server import Server
@@ -33,32 +34,40 @@ def input_value(text, is_numeric, default=None):
         return int(value)
     return value
 
-def make_config(filename, data):
-    with open(filename, 'w') as f:
+def make_config(file_path, data):
+    with open(file_path, 'w') as f:
         f.write(json.dumps(data))
 
-def read_config(filename):
-    with open(filename, 'r') as f:
+def read_config(file_path):
+    with open(file_path, 'r') as f:
         return json.loads(f.read())
 
 if __name__ == '__main__':
+    try:
+        BASE_PATH = sys._MEIPASS
+    except Exception:
+        BASE_PATH = os.path.abspath(".")
+
     FILENAME = 'config.json'
+    FILE_PATH = os.path.join(BASE_PATH, FILENAME)
+    print(FILE_PATH)
+
     should_skip = False
-    if not os.path.isfile(FILENAME):
+    if not os.path.isfile(FILE_PATH):
         data = { 
             'token': input_value('Введите токен вашего бота', False),
             'chat': input_value('Введите чат с вашим ботом', True, 0)
             }
-        make_config(FILENAME, data)
+        make_config(FILE_PATH, data)
         should_skip = True
 
-    config = read_config(FILENAME)
+    config = read_config(FILE_PATH)
     if not should_skip and (not config['token'] or not config['chat']):
         config = { 
             'token': input_value('Введите токен вашего бота', False, config['token']),
             'chat': input_value('Введите чат с вашим ботом', True, config['chat'])
             }
-        make_config(FILENAME, config)
+        make_config(FILE_PATH, config)
 
     server = Server('localhost', 12345, Bot, config)
     server.run()
