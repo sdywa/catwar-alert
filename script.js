@@ -15,7 +15,7 @@ const socket = window.socket;
     const HOST = 'localhost';
     const PORT = 12345;
     const MESSAGES = [];
-    const DEFAULT_URL = `http://localhost:${PORT}/test`;
+    const DEFAULT_URL = `http://${HOST}:${PORT}/test`;
 
     function prepareData(content) {
         const element = document.createElement('div');
