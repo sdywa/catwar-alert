@@ -1,5 +1,6 @@
 import sys
 import os
+import signal
 import json
 from modules.server import Server
 from modules.telegram_bot import Bot
@@ -82,6 +83,7 @@ if __name__ == '__main__':
         }
         make_config(FILE_PATH, config)
 
+    signal.signal(signal.SIGINT, signal.SIG_DFL)
     if 'token' in config:
         server = Server('localhost', 20360, Bot, config)
         server.run()
