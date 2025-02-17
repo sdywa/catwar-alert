@@ -3,6 +3,7 @@ import os
 import signal
 import json
 from modules.server import Server
+from modules.transmitter import Transmitter
 from modules.telegram_bot import Bot
 
 
@@ -88,4 +89,5 @@ if __name__ == '__main__':
         server = Server('localhost', 20360, Bot, config)
         server.run()
     else:
-        print('not implemented')
+        server = Transmitter('localhost', 20360, config['server'])
+        server.run()
