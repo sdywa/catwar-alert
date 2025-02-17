@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         CatwarAlert
-// @version      1.0
+// @version      1.1
 // @description  Скрипт, передающий информацию серверу
 // @author       Ale
 // @match        https://catwar.su/*
+// @match        https://catwar.net/*
 // @grant        none
 // ==/UserScript==
 
@@ -15,7 +16,7 @@ const socket = window.socket;
     const HOST = 'localhost';
     const PORT = 12345;
     const MESSAGES = [];
-    const DEFAULT_URL = `http://${HOST}:${PORT}/test`;
+    const DEFAULT_URL = `http://${HOST}:${PORT}/`;
 
     function prepareData(content) {
         const element = document.createElement('div');

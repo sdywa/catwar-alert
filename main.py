@@ -18,11 +18,15 @@ def make_variable(variable_name, variable_value, is_string):
     return f'{variable_name} = {variable_value}\n'
 
 def input_value(text, is_numeric, default=None):
+    valid_func = lambda x: True
+    if (is_numeric):
+        valid_func = lambda x: is_number(x) == is_numeric
+
     value = ''
     if default != None:
-        text = f'{text} (значение по умолчанию {default})'
+        text = f'{text} (значение по умолчанию: "{default}")'
     text += ':'
-    while not value or is_number(value) != is_numeric:
+    while not value or not valid_func(value):
         print(text)
         value = input()
 
@@ -53,20 +57,33 @@ if __name__ == '__main__':
 
     should_skip = False
     if not os.path.isfile(FILE_PATH):
-        data = { 
-            'token': input_value('Введите токен вашего бота', False),
-            'chat': input_value('Введите чат с вашим ботом', True, 0)
+        data = {
+            'server': input_value('Введите адрес удалённого сервера (если имеется)', False, "")
+        }
+        
+        if not data['server']: 
+            data = { 
+                'token': input_value('Введите токен вашего бота', False),
+                'chat': input_value('Введите чат с вашим ботом', True, 0),
             }
+        
         make_config(FILE_PATH, data)
         should_skip = True
 
     config = read_config(FILE_PATH)
+
+    if 'server' in config:
+        should_skip = True
+    
     if not should_skip and (not config['token'] or not config['chat']):
         config = { 
             'token': input_value('Введите токен вашего бота', False, config['token']),
             'chat': input_value('Введите чат с вашим ботом', True, config['chat'])
-            }
+        }
         make_config(FILE_PATH, config)
 
-    server = Server('localhost', 20360, Bot, config)
-    server.run()
+    if 'token' in config:
+        server = Server('localhost', 20360, Bot, config)
+        server.run()
+    else:
+        print('not implemented')
