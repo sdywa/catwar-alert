@@ -3,8 +3,8 @@
 // @version      1.1
 // @description  Скрипт, передающий информацию серверу
 // @author       Ale
-// @match        https://catwar.su/*
-// @match        https://catwar.net/*
+// @match        https://catwar.su/cw3*
+// @match        https://catwar.net/cw3*
 // @grant        none
 // ==/UserScript==
 
@@ -42,7 +42,7 @@ const socket = window.socket;
 
     function formatTime(time) {
         const date = new Date(time * 1000);
-        return `${ date.toLocaleDateString("ru-RU", { day: 'numeric', month: 'long' }) } в ${ date.toLocaleTimeString("ru-RU", {hour: "numeric", minute: "numeric"}) }`;
+        return `${ date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' }) } в ${ date.toLocaleTimeString('ru-RU', {hour: 'numeric', minute: 'numeric'}) }`;
     }
 
     async function sendRecentMessages(messages) {
@@ -76,6 +76,39 @@ const socket = window.socket;
         MESSAGES.push(message.id);
         await sendContent(text, 'chat', { id: message.id });
     }
+
+    function setupSSEConnection() {
+        return new Promise((res) => {
+            const eventSource = new EventSource('http://127.0.0.1:20361');
+            eventSource.onmessage = (event) => {
+                document.querySelector('#text').value = event.data;
+                document.querySelector('#msg_send').click();
+            };
+            eventSource.onerror = (error) => {
+                    throw Error(error);
+            };
+            eventSource.onopen = () => {
+                res();
+            };
+    
+            window.onbeforeunload = function () {
+                eventSource.close();
+            };
+        });
+    }
+
+    const interval = setInterval(async () => {
+        let connected = true;
+        try {
+            await setupSSEConnection();
+        } catch {
+            connected = false;
+        }
+    
+        if (connected) {
+            clearInterval(interval);
+        }
+    }, 5000);
 
     socket.on('msg load', sendRecentMessages);
     socket.on('msg', sendMessage);

@@ -3,11 +3,13 @@ import time
 import socket
 import threading
 import datetime as dt
+from collections import deque
 from urllib.parse import urlparse, parse_qs
 
 class Server(): 
     SEPARATOR = '\r\n'
     MESSAGES = set()
+    QUEUE = deque()
 
     def __init__(self, host, port, botClass, config):
         self.host = host
@@ -15,9 +17,11 @@ class Server():
         self.bot = None
         self.botClass = botClass
         self.config = config
+        self.config['callback'] = self.save_message
 
     def run(self):
         threading.Thread(target=self.awake_bot).start()
+        threading.Thread(target=self.awake_callback_server).start()
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind((self.host, self.port))
@@ -31,6 +35,43 @@ class Server():
                     self.send_message(content)
                 except Exception as e:
                     print(e)
+
+    def save_message(self, chat_id, message):
+        if chat_id == self.config['chat']:
+            self.QUEUE.append(message)
+
+    def awake_callback_server(self):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            s.bind((self.host, self.port + 1))
+            s.listen(5)
+            print('SSE listening on port %s ...' % (self.port + 1))
+            while True:
+                try:
+                    conn, addr = s.accept()
+                    self.handle_SSE_client(conn, addr)
+                except Exception as e:
+                    print(e)
+
+    def handle_SSE_client(self, conn, addr):
+        print(f'{dt.datetime.now()} SSE connected by {addr}')
+        _, _, origin = conn.recv(1024).decode('utf-8').partition('Origin: ')
+        origin, _, _ = origin.partition('\n')
+        origin = origin.strip()
+        headers = f'HTTP/1.1 200 OK{self.SEPARATOR}Content-Type: text/event-stream{self.SEPARATOR}Cache-Control: no-cache{self.SEPARATOR}Connection: keep-alive{self.SEPARATOR}Access-Control-Allow-Origin: {origin}{self.SEPARATOR}{self.SEPARATOR}'
+        conn.sendall(headers.encode())
+
+        try:
+            while True:
+                if not len(self.QUEUE):
+                    time.sleep(2)
+                else:
+                    message = f"data: {self.QUEUE.popleft()}\n\n"
+                    conn.sendall(message.encode())
+        except BrokenPipeError:
+            print(f'{dt.datetime.now()} SSE disconnected by {addr}')
+        finally:
+            conn.close()
 
     def awake_bot(self):
         self.bot = self.botClass(**self.config)

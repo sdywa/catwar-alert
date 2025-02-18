@@ -1,11 +1,13 @@
 import telebot
 import datetime as dt
+import time
 
 class Bot():
-    def __init__(self, token, chat=0):
+    def __init__(self, token, chat, callback):
         self.token = token
         self.chat = chat
         self.bot = telebot.TeleBot(self.token)
+        self.callback = callback
 
         def filter(message):
             if not chat:
@@ -14,7 +16,10 @@ class Bot():
 
         @self.bot.message_handler(func=filter)
         def send_info(message):
-            self.bot.reply_to(message, f'Ваш ID: { message.from_user.id }\nID чата: { message.chat.id }')
+            if not self.chat:
+                self.bot.reply_to(message, f'Ваш ID: { message.from_user.id }\nID чата: { message.chat.id }')
+            else:
+                self.callback(message.chat.id, message.text)
 
     def run(self):
         while True:
