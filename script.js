@@ -17,6 +17,7 @@ const socket = window.socket;
     const PORT = 12345;
     const MESSAGES = [];
     const DEFAULT_URL = `http://${HOST}:${PORT}/`;
+    const MESSAGES_DEFAULT_URL = `http://${HOST}:${PORT + 1}/`;
 
     function prepareData(content) {
         const element = document.createElement('div');
@@ -77,20 +78,47 @@ const socket = window.socket;
         await sendContent(text, 'chat', { id: message.id });
     }
 
+    function getRandomRange(min, max) {
+        return Math.random() * (max - min) + min;
+    }
+
+    function sleep(ms) {
+        return new Promise((res) => setTimeout(() => {
+            res();
+        }, ms));
+    }
+
     function setupSSEConnection() {
         return new Promise((res) => {
-            const eventSource = new EventSource('http://127.0.0.1:20361');
-            eventSource.onmessage = (event) => {
-                document.querySelector('#text').value = event.data;
-                document.querySelector('#msg_send').click();
+            let messages = [];
+            let isSending = false;
+            const eventSource = new EventSource(MESSAGES_DEFAULT_URL);
+
+            eventSource.onmessage = async (event) => {
+                messages.push(event.data);
+
+                if (!isSending) {
+                    while (messages.length) {
+                        isSending = true;
+                        document.querySelector("#text").value = messages[0];
+                        document.querySelector("#msg_send").click();
+                        messages = messages.slice(1);
+                        await sleep(getRandomRange(1645, 2589));
+                    }
+
+                    isSending = false;
+                }
             };
+
             eventSource.onerror = (error) => {
-                    throw Error(error);
+                console.log(error);
+                throw Error();
             };
+
             eventSource.onopen = () => {
                 res();
             };
-    
+
             window.onbeforeunload = function () {
                 eventSource.close();
             };
@@ -104,7 +132,7 @@ const socket = window.socket;
         } catch {
             connected = false;
         }
-    
+
         if (connected) {
             clearInterval(interval);
         }

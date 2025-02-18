@@ -1,11 +1,8 @@
-import json
-import time
 import socket
-import threading
 import datetime as dt
 from urllib.parse import urlparse, parse_qs
 
-class Transmitter(): 
+class Transmitter: 
     SEPARATOR = '\r\n'
 
     def __init__(self, host, port, server_data):
