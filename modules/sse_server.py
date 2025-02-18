@@ -2,7 +2,8 @@ import time
 import socket
 import datetime as dt
 from collections import deque
-from urllib.parse import urlparse, parse_qs
+from helpers.servers import recieve_request
+
 
 class SSEServer:
     SEPARATOR = '\r\n'
@@ -29,20 +30,16 @@ class SSEServer:
                     print(e)
     
     def handle_sse_client(self, conn, addr):
-        print(f'{dt.datetime.now()} SSE connected by {addr}')
-        _, _, origin = conn.recv(1024).decode('utf-8').partition('Origin: ')
-        origin, _, _ = origin.partition('\n')
-        origin = origin.strip()
+        origin, _ = recieve_request(conn, addr, "SSE")
         headers = f'HTTP/1.1 200 OK{self.SEPARATOR}Content-Type: text/event-stream{self.SEPARATOR}Cache-Control: no-cache{self.SEPARATOR}Connection: keep-alive{self.SEPARATOR}Access-Control-Allow-Origin: {origin}{self.SEPARATOR}{self.SEPARATOR}'
         conn.sendall(headers.encode())
 
         try:
             while True:
-                print(self.MESSAGES)
                 if not len(self.MESSAGES):
                     time.sleep(2)
                 else:
-                    message = f"data: {self.MESSAGES.popleft()}\n\n"
+                    message = f'data: {self.MESSAGES.popleft()}\n\n'
                     conn.sendall(message.encode())
         except BrokenPipeError:
             print(f'{dt.datetime.now()} SSE disconnected by {addr}')

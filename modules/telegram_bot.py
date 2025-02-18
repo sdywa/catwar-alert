@@ -2,6 +2,7 @@ import telebot
 import datetime as dt
 import time
 
+
 class Bot:
     def __init__(self, token, chat, callback):
         self.token = token

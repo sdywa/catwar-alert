@@ -14,10 +14,12 @@ def is_number(s):
         return False
     return True
 
+
 def make_variable(variable_name, variable_value, is_string):
     if is_string:
         variable_value = f"'{variable_value}'"
     return f'{variable_name} = {variable_value}\n'
+
 
 def input_value(text, is_numeric, default=None):
     valid_func = lambda x: True
@@ -40,13 +42,16 @@ def input_value(text, is_numeric, default=None):
         return int(value)
     return value
 
+
 def make_config(file_path, data):
     with open(file_path, 'w') as f:
         f.write(json.dumps(data))
 
+
 def read_config(file_path):
     with open(file_path, 'r') as f:
         return json.loads(f.read())
+
 
 if __name__ == '__main__':
     try:

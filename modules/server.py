@@ -5,9 +5,10 @@ import threading
 import datetime as dt
 from urllib.parse import urlparse, parse_qs
 from modules.sse_server import SSEServer
+from helpers.servers import recieve_request, send_no_content
+
 
 class Server: 
-    SEPARATOR = '\r\n'
     MESSAGES = set()
 
     def __init__(self, host, port, botClass, config):
@@ -47,17 +48,8 @@ class Server:
         self.bot = self.botClass(**self.config)
         self.bot.run()
 
-    def recieve_request(self, conn, addr):
-        print(f'{dt.datetime.now()} Connected by {addr}')
-        data = conn.recv(1024)
-        udata = data.decode('utf-8')
-        response = f'HTTP/1.1 204 No Content{self.SEPARATOR}Access-Control-Allow-Origin: https://catwar.su{self.SEPARATOR}{self.SEPARATOR}'
-        conn.sendall(response.encode())
-        conn.close()
-        return udata
-
     def parse_request(self, request):
-        request_info, *headers = request.split(self.SEPARATOR)
+        request_info, *headers = request.split('\r\n')
         method, path, *_ = request_info.split(' ')
         if method != 'POST':
             return None
@@ -73,7 +65,9 @@ class Server:
     
     def get_message(self, socket):
         conn, addr = socket.accept()
-        request = self.recieve_request(conn, addr)
+        origin, request = recieve_request(conn, addr, "MAIN")
+        send_no_content(conn, origin)
+
         if not request: 
             return
 

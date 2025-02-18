@@ -1,10 +1,9 @@
 import socket
 import datetime as dt
-from urllib.parse import urlparse, parse_qs
+from helpers.servers import recieve_request, send_no_content
+
 
 class Transmitter: 
-    SEPARATOR = '\r\n'
-
     def __init__(self, host, port, server_data):
         self.host = host
         self.port = port
@@ -26,16 +25,9 @@ class Transmitter:
             while True:
                 try:
                     conn, addr = s.accept()
-                    request = self.recieve_request(conn, addr)
+                    origin, request = recieve_request(conn, addr, "RESENT")
+                    send_no_content(conn, origin)
+
                     self.send_message(request)
                 except Exception as e:
                     print(e)
-
-    def recieve_request(self, conn, addr):
-        print(f'{dt.datetime.now()} Connected by {addr}')
-        data = conn.recv(1024)
-        udata = data.decode('utf-8')
-        response = f'HTTP/1.1 204 No Content{self.SEPARATOR}Access-Control-Allow-Origin: https://catwar.su{self.SEPARATOR}{self.SEPARATOR}'
-        conn.sendall(response.encode())
-        conn.close()
-        return udata
