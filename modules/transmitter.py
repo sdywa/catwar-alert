@@ -1,15 +1,14 @@
 import socket
-import datetime as dt
 from helpers.servers import recieve_request, send_no_content
 
 
-class Transmitter: 
+class Transmitter:
     def __init__(self, host, port, server_data):
         self.host = host
         self.port = port
 
-        server_host, server_port = server_data.split(':')
-        self.server_data = ( server_host, int(server_port) )
+        server_host, server_port = server_data.split(":")
+        self.server_data = (server_host, int(server_port))
 
     def send_message(self, message):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -21,7 +20,7 @@ class Transmitter:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind((self.host, self.port))
             s.listen(5)
-            print('Listening on port %s ...' % self.port)
+            print("Listening on port %s ..." % self.port)
             while True:
                 try:
                     conn, addr = s.accept()

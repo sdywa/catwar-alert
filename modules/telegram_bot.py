@@ -12,20 +12,23 @@ class Bot:
 
         def filter(message):
             if not chat:
-                return True # Отвечаем всем, если не указан чат
+                return True  # Отвечаем всем, если не указан чат
             return message.chat.id == chat
 
         @self.bot.message_handler(func=filter)
         def send_info(message):
             if not self.chat:
-                self.bot.reply_to(message, f'Ваш ID: { message.from_user.id }\nID чата: { message.chat.id }')
+                self.bot.reply_to(
+                    message,
+                    f"Ваш ID: {message.from_user.id}\nID чата: {message.chat.id}",
+                )
             else:
                 self.callback(message.chat.id, message.text)
 
     def run(self):
         while True:
             try:
-                self.bot.infinity_polling(timeout=10, long_polling_timeout = 5)
+                self.bot.infinity_polling(timeout=10, long_polling_timeout=5)
             except:
                 print(dt.datetime.now())
                 time.sleep(10)
@@ -34,4 +37,4 @@ class Bot:
         if self.chat:
             self.bot.send_message(self.chat, message)
         else:
-            raise ValueError('Поле chat не должно быть пустым')
+            raise ValueError("Поле chat не должно быть пустым")

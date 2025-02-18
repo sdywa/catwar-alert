@@ -2,13 +2,12 @@ import json
 import time
 import socket
 import threading
-import datetime as dt
 from urllib.parse import urlparse, parse_qs
 from modules.sse_server import SSEServer
 from helpers.servers import recieve_request, send_no_content
 
 
-class Server: 
+class Server:
     MESSAGES = set()
 
     def __init__(self, host, port, botClass, config):
@@ -17,7 +16,7 @@ class Server:
         self.bot = None
         self.botClass = botClass
         self.config = config
-        self.config['callback'] = self.save_message
+        self.config["callback"] = self.save_message
 
     def run(self):
         threading.Thread(target=self.awake_bot).start()
@@ -26,18 +25,18 @@ class Server:
             s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             s.bind((self.host, self.port))
             s.listen(5)
-            print('Listening on port %s ...' % self.port)
+            print("Listening on port %s ..." % self.port)
             while True:
                 try:
                     content = self.get_message(s)
-                    if (not content):
+                    if not content:
                         continue
                     self.send_message(content)
                 except Exception as e:
                     print(e)
 
     def save_message(self, chat_id, message):
-        if chat_id == self.config['chat']:
+        if chat_id == self.config["chat"]:
             self.sse_server.add(message)
 
     def awake_callback_server(self):
@@ -49,9 +48,9 @@ class Server:
         self.bot.run()
 
     def parse_request(self, request):
-        request_info, *headers = request.split('\r\n')
-        method, path, *_ = request_info.split(' ')
-        if method != 'POST':
+        request_info, *headers = request.split("\r\n")
+        method, path, *_ = request_info.split(" ")
+        if method != "POST":
             return None
 
         data = headers.pop()
@@ -62,22 +61,22 @@ class Server:
         for keyword in params:
             params[keyword] = params[keyword][0]
         return params, data
-    
+
     def get_message(self, socket):
         conn, addr = socket.accept()
         origin, request = recieve_request(conn, addr, "MAIN")
         send_no_content(conn, origin)
 
-        if not request: 
+        if not request:
             return
 
         params, data = self.parse_request(request)
-        if 'type' in params and params['type'] == 'chat':
-            if params['id'] in self.MESSAGES:
-                raise Exception('Такое сообщение уже есть!')
+        if "type" in params and params["type"] == "chat":
+            if params["id"] in self.MESSAGES:
+                raise Exception("Такое сообщение уже есть!")
             else:
-                self.MESSAGES.add(params['id'])
-        return data['content']
+                self.MESSAGES.add(params["id"])
+        return data["content"]
 
     def send_message_forever(self, message):
         try:
@@ -89,5 +88,5 @@ class Server:
 
     def send_message(self, content):
         if not content:
-            raise Exception('Пустое сообщение')
+            raise Exception("Пустое сообщение")
         self.send_message_forever(content)
