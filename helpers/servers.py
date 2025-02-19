@@ -1,5 +1,7 @@
+import json
 import socket
 import datetime as dt
+from urllib.parse import urlparse, parse_qs
 from textwrap import dedent
 
 
@@ -7,6 +9,24 @@ def parse_origin(data):
     _, _, origin = data.partition("Origin: ")
     origin, _, _ = origin.partition("\n")
     return origin.strip()
+
+
+def parse_request(request):
+        request_info, *headers = request.split("\r\n")
+        method, path, *_ = request_info.split(" ")
+        if method != "POST":
+            return None
+
+        data = headers.pop()
+        if data:
+            data = json.loads(data)
+        output = urlparse(path)
+        params = parse_qs(output.query)
+        for keyword in params:
+            params[keyword] = params[keyword][0]
+        
+        params |= data
+        return params
 
 
 def setup_socket_connection(host, port, main_loop_func, marker):

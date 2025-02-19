@@ -1,15 +1,22 @@
 import json
 import time
 import threading
-from urllib.parse import urlparse, parse_qs
+from enum import Enum
+from helpers.servers import parse_request, setup_socket_connection, recieve_request, send_no_content
 from modules.sse_server import SSEServer
-from helpers.servers import setup_socket_connection, recieve_request, send_no_content
+
+
+class ServerType(Enum):
+    DEFAULT = 0
+    MULTI_USER = 1
 
 
 class Server:
     MESSAGES = set()
+    CHATS = set()
 
-    def __init__(self, host, port, botClass, config):
+    def __init__(self, type, host, port, botClass, config):
+        self.type = type
         self.host = host
         self.port = port
         self.bot = None
@@ -17,15 +24,18 @@ class Server:
         self.config = config
 
         def save_message(self, chat_id, message):
-            if chat_id == self.config["chat"]:
-                self.sse_server.add(message)
-
+            if self.type == ServerType.DEFAULT:
+                if chat_id == self.config["chat"]:
+                    self.sse_server.add(chat_id, message)
+            elif self.type == ServerType.MULTI_USER:
+                self.sse_server.add(chat_id, message)
+                
         self.config["callback"] = save_message.__get__(self)
 
         def main_loop(self, s):
-            content = self.get_message(s)
+            chat, content = self.get_message(s)
             if content:
-                self.send_message(content)
+                self.send_message(chat, content)
 
         self.main_loop = main_loop.__get__(self)
 
@@ -39,49 +49,48 @@ class Server:
         self.sse_server.run()
 
     def awake_bot(self):
-        self.bot = self.botClass(**self.config)
+        self.bot = self.botClass(self.config["token"], self.config["callback"])
         self.bot.run()
-
-    def parse_request(self, request):
-        request_info, *headers = request.split("\r\n")
-        method, path, *_ = request_info.split(" ")
-        if method != "POST":
-            return None
-
-        data = headers.pop()
-        if data:
-            data = json.loads(data)
-        output = urlparse(path)
-        params = parse_qs(output.query)
-        for keyword in params:
-            params[keyword] = params[keyword][0]
-        return params, data
 
     def get_message(self, socket):
         conn, addr = socket.accept()
-        origin, request = recieve_request(conn, addr, "MAIN")
-        send_no_content(conn, origin)
 
-        if not request:
-            return
+        data = {}
+        if self.type == ServerType.DEFAULT:
+            origin, request = recieve_request(conn, addr, "MAIN")
+            send_no_content(conn, origin)
 
-        params, data = self.parse_request(request)
-        if "type" in params and params["type"] == "chat":
-            if params["id"] in self.MESSAGES:
+            if not request:
+                return
+
+            data = parse_request(request)
+            data["chat"] = self.config["chat"]
+        elif self.type == ServerType.MULTI_USER:
+            origin, request = recieve_request(conn, addr, "RESENT")
+            
+            if not request:
+                return
+            
+            data = json.loads(request)
+            
+        if "type" in data and data["type"] == "chat":
+            if (data["chat"], data["id"]) in self.MESSAGES:
                 raise Exception("Такое сообщение уже есть!")
             else:
-                self.MESSAGES.add(params["id"])
-        return data["content"]
+                self.MESSAGES.add((data["chat"], data["id"]))
 
-    def send_message_forever(self, message):
+        self.CHATS.add(data["chat"])
+        return (data["chat"], data["content"])
+
+    def send_message_forever(self, chat, message):
         try:
-            self.bot.send_message(message)
+            self.bot.send_message(chat, message)
         except Exception as e:
             print(e)
             time.sleep(2)
-            self.send_message_forever(message)
+            self.send_message_forever(chat, message)
 
-    def send_message(self, content):
+    def send_message(self, chat, content):
         if not content:
             raise Exception("Пустое сообщение")
-        self.send_message_forever(content)
+        self.send_message_forever(chat, content)

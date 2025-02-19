@@ -2,7 +2,7 @@ import sys
 import os
 import signal
 import json
-from modules.server import Server
+from modules.server import Server, ServerType
 from modules.transmitter import Transmitter
 from modules.telegram_bot import Bot
 
@@ -53,6 +53,53 @@ def read_config(file_path):
         return json.loads(f.read())
 
 
+def generate_config(file_path):
+    inputs = {
+        "token": {
+            "text": "Введите токен вашего бота",
+            "is_numeric": False
+        },
+        "chat": {
+            "text": "Введите ID чата с ботом",
+            "is_numeric": True,
+            "default": 0
+        },
+        "server": {
+            "text": "Введите адрес удалённого сервера",
+            "is_numeric": False
+        },
+    }
+    questions = {
+        "d": [ "token", "chat" ],
+        "t": [ "server", "chat" ],
+        "s": [ "token" ]
+    }
+
+    if not os.path.isfile(file_path):
+        data = {
+            "type": input_value(
+                "Введите тип использования (d - обычное, t - передатчик, s - сервер для передатчика)", False, "d"
+            )
+        }
+
+        for question in questions[data["type"]]:
+            data[question] = input_value(**inputs[question])
+
+        make_config(file_path, data)
+        return data
+
+    config = read_config(file_path)
+    if any(not config[question] for question in questions[config["type"]]):
+        for question in questions[config["type"]]:
+            input_info = inputs[question]
+            input_info["default"] = config[question]
+            config[question] = input_value(**input_info)
+    
+        make_config(file_path, config)
+
+    return config
+
+
 if __name__ == "__main__":
     try:
         BASE_PATH = sys._MEIPASS
@@ -61,40 +108,19 @@ if __name__ == "__main__":
 
     FILENAME = "config.json"
     FILE_PATH = os.path.join(BASE_PATH, FILENAME)
-
-    should_skip = False
-    if not os.path.isfile(FILE_PATH):
-        data = {
-            "server": input_value(
-                "Введите адрес удалённого сервера (если имеется)", False, ""
-            )
-        }
-
-        if not data["server"]:
-            data = {
-                "token": input_value("Введите токен вашего бота", False),
-                "chat": input_value("Введите чат с вашим ботом", True, 0),
-            }
-
-        make_config(FILE_PATH, data)
-        should_skip = True
-
-    config = read_config(FILE_PATH)
-
-    if "server" in config:
-        should_skip = True
-
-    if not should_skip and (not config["token"] or not config["chat"]):
-        config = {
-            "token": input_value("Введите токен вашего бота", False, config["token"]),
-            "chat": input_value("Введите чат с вашим ботом", True, config["chat"]),
-        }
-        make_config(FILE_PATH, config)
+    config = generate_config(FILE_PATH)
 
     signal.signal(signal.SIGINT, signal.SIG_DFL)
-    if "token" in config:
-        server = Server("localhost", 20360, Bot, config)
+    type = config.pop("type")
+    if type == "t":
+        server = Transmitter("localhost", 20360, config)
         server.run()
     else:
-        server = Transmitter("localhost", 20360, config["server"])
+        server = Server(
+            ServerType.DEFAULT if type == "d" else ServerType.MULTI_USER, 
+            "localhost", 
+            20360, 
+            Bot, 
+            config,
+        )
         server.run()
