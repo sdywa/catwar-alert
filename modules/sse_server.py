@@ -2,7 +2,7 @@ import time
 import socket
 import datetime as dt
 from collections import deque
-from helpers.servers import recieve_request
+from helpers.servers import setup_socket_connection, recieve_request
 
 
 class SSEServer:
@@ -13,21 +13,17 @@ class SSEServer:
         self.host = host
         self.port = port
 
+        def main_loop(self, s):
+            conn, addr = s.accept()
+            self.handle_sse_client(conn, addr)
+
+        self.main_loop = main_loop.__get__(self)
+
     def add(self, message):
         self.MESSAGES.append(message)
 
     def run(self):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s.bind((self.host, self.port))
-            s.listen(5)
-            print("SSE listening on port %s ..." % (self.port))
-            while True:
-                try:
-                    conn, addr = s.accept()
-                    self.handle_sse_client(conn, addr)
-                except Exception as e:
-                    print(e)
+        setup_socket_connection(self.host, self.port, self.main_loop, "SSE")
 
     def handle_sse_client(self, conn, addr):
         origin, _ = recieve_request(conn, addr, "SSE")

@@ -23,7 +23,7 @@ class Bot:
                     f"Ваш ID: {message.from_user.id}\nID чата: {message.chat.id}",
                 )
             else:
-                self.callback(message.chat.id, message.text)
+                self.callback(message.chat.id, message.text.trim())
 
     def run(self):
         while True:

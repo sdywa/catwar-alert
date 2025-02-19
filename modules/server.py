@@ -1,10 +1,9 @@
 import json
 import time
-import socket
 import threading
 from urllib.parse import urlparse, parse_qs
 from modules.sse_server import SSEServer
-from helpers.servers import recieve_request, send_no_content
+from helpers.servers import setup_socket_connection, recieve_request, send_no_content
 
 
 class Server:
@@ -16,28 +15,24 @@ class Server:
         self.bot = None
         self.botClass = botClass
         self.config = config
-        self.config["callback"] = self.save_message
+
+        def save_message(self, chat_id, message):
+            if chat_id == self.config["chat"]:
+                self.sse_server.add(message)
+
+        self.config["callback"] = save_message.__get__(self)
+
+        def main_loop(self, s):
+            content = self.get_message(s)
+            if content:
+                self.send_message(content)
+
+        self.main_loop = main_loop.__get__(self)
 
     def run(self):
         threading.Thread(target=self.awake_bot).start()
         threading.Thread(target=self.awake_callback_server).start()
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s.bind((self.host, self.port))
-            s.listen(5)
-            print("Listening on port %s ..." % self.port)
-            while True:
-                try:
-                    content = self.get_message(s)
-                    if not content:
-                        continue
-                    self.send_message(content)
-                except Exception as e:
-                    print(e)
-
-    def save_message(self, chat_id, message):
-        if chat_id == self.config["chat"]:
-            self.sse_server.add(message)
+        setup_socket_connection(self.host, self.port, self.main_loop, "MAIN")
 
     def awake_callback_server(self):
         self.sse_server = SSEServer(self.host, self.port + 1)

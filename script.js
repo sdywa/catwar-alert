@@ -14,7 +14,7 @@ const socket = window.socket;
     'use strict';
     /* eslint-disable curly, no-return-assign */
     const HOST = 'localhost';
-    const PORT = 12345;
+    const PORT = 20360;
     const MESSAGES = [];
     const DEFAULT_URL = `http://${HOST}:${PORT}/`;
     const MESSAGES_DEFAULT_URL = `http://${HOST}:${PORT + 1}/`;
