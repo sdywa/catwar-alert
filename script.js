@@ -88,55 +88,39 @@ const socket = window.socket;
         }, ms));
     }
 
-    function setupSSEConnection() {
-        return new Promise((res) => {
-            let messages = [];
-            let isSending = false;
-            const eventSource = new EventSource(MESSAGES_DEFAULT_URL);
+    let eventSource;
+    function setupSSEConnection(outerMessages=[]) {
+        if (eventSource) {
+            eventSource.close();
+        }
 
-            eventSource.onmessage = async (event) => {
+        let messages = outerMessages;
+        let isSending = false;
+        eventSource = new EventSource(MESSAGES_DEFAULT_URL);
+
+        eventSource.onmessage = async (event) => {
+            if (event.data.trim() !== "") {
                 messages.push(event.data);
+            }
 
-                if (!isSending) {
-                    while (messages.length) {
-                        isSending = true;
-                        document.querySelector("#text").value = messages[0];
-                        document.querySelector("#msg_send").click();
-                        messages = messages.slice(1);
-                        await sleep(getRandomRange(1645, 2589));
-                    }
-
-                    isSending = false;
+            if (!isSending) {
+                while (messages.length) {
+                    isSending = true;
+                    document.querySelector("#text").value = messages[0];
+                    document.querySelector("#msg_send").click();
+                    messages = messages.slice(1);
+                    await sleep(getRandomRange(1645, 2589));
                 }
-            };
 
-            eventSource.onerror = (error) => {
-                console.log(error);
-                throw Error();
-            };
+                isSending = false;
+            }
+        };
 
-            eventSource.onopen = () => {
-                res();
-            };
-
-            window.onbeforeunload = function () {
-                eventSource.close();
-            };
-        });
+        eventSource.onerror = () => {
+            eventSource.close();
+            setTimeout(() => setupSSEConnection(messages), 2000);
+        };
     }
-
-    const interval = setInterval(async () => {
-        let connected = true;
-        try {
-            await setupSSEConnection();
-        } catch {
-            connected = false;
-        }
-
-        if (connected) {
-            clearInterval(interval);
-        }
-    }, 5000);
 
     socket.on('msg load', sendRecentMessages);
     socket.on('msg', sendMessage);
@@ -144,4 +128,11 @@ const socket = window.socket;
     socket.on('notRead chat', alertAboutChat);
     socket.on('update', alertAboutFight);
     socket.on('pick', () => sendContent('Вас подняли!'));
+
+    setupSSEConnection();
+    window.addEventListener("beforeunload", () => {
+        if (eventSource) {
+            eventSource.close();
+        }
+    });
 })();

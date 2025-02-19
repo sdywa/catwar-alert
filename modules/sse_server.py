@@ -35,13 +35,19 @@ class SSEServer:
         conn.sendall(headers.encode())
 
         try:
+            conn.settimeout(5)
+
             while True:
-                if not len(self.MESSAGES):
-                    time.sleep(2)
-                else:
-                    message = f"data: {self.MESSAGES.popleft()}\n\n"
-                    conn.sendall(message.encode())
-        except BrokenPipeError:
-            print(f"{dt.datetime.now()} SSE disconnected by {addr}")
+                try:
+                    conn.sendall(b"data: \n\n") # checking if connection is alive
+                    if not self.MESSAGES:
+                        time.sleep(1)
+                    else:
+                        message = f"data: {self.MESSAGES[0]}\n\n"
+                        conn.sendall(message.encode())
+                        self.MESSAGES.popleft()
+                except (BrokenPipeError, ConnectionResetError, socket.timeout):
+                    print(f"[SSE] {dt.datetime.now()} Disconnected by {addr}")
+                    break 
         finally:
             conn.close()
