@@ -100,7 +100,10 @@ const socket = window.socket;
 
         eventSource.onmessage = async (event) => {
             if (event.data.trim() !== "") {
-                messages.push(event.data);
+                const parsed = JSON.parse(event.data);
+                if (parsed.message) {
+                    messages.push(parsed.message);
+                }
             }
 
             if (!isSending) {

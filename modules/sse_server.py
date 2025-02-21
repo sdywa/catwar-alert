@@ -1,3 +1,4 @@
+import json
 import time
 import socket
 import datetime as dt
@@ -6,7 +7,6 @@ from helpers.servers import setup_socket_connection, recieve_request
 
 
 class SSEServer:
-    SEPARATOR = "\r\n"
     MESSAGES = deque()
 
     def __init__(self, host, port):
@@ -19,15 +19,25 @@ class SSEServer:
 
         self.main_loop = main_loop.__get__(self)
 
-    def add(self, message):
-        self.MESSAGES.append(message)
+    def add(self, chat, message):
+        self.MESSAGES.append({
+            "chat": chat, 
+            "message": message
+        })
 
     def run(self):
         setup_socket_connection(self.host, self.port, self.main_loop, "SSE")
 
     def handle_sse_client(self, conn, addr):
         origin, _ = recieve_request(conn, addr, "SSE")
-        headers = f"HTTP/1.1 200 OK{self.SEPARATOR}Content-Type: text/event-stream{self.SEPARATOR}Cache-Control: no-cache{self.SEPARATOR}Connection: keep-alive{self.SEPARATOR}Access-Control-Allow-Origin: {origin}{self.SEPARATOR}{self.SEPARATOR}"
+        headers = (
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: text/event-stream\r\n"
+            "Cache-Control: no-cache\r\n"
+            "Connection: keep-alive\r\n"
+            f"Access-Control-Allow-Origin: {origin}\r\n"
+            "\r\n"
+        )
         conn.sendall(headers.encode())
 
         try:
@@ -39,7 +49,7 @@ class SSEServer:
                     if not self.MESSAGES:
                         time.sleep(1)
                     else:
-                        message = f"data: {self.MESSAGES[0]}\n\n"
+                        message = f"data: {json.dumps(self.MESSAGES[0])}\n\n"
                         conn.sendall(message.encode())
                         self.MESSAGES.popleft()
                 except (BrokenPipeError, ConnectionResetError, socket.timeout):
