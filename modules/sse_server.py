@@ -8,6 +8,7 @@ from helpers.servers import setup_socket_connection, recieve_request
 
 
 class SSEServer:
+    NAME = "SSE"
     MESSAGES = deque()
 
     def __init__(self, host, port, max_clients=1):
@@ -24,7 +25,7 @@ class SSEServer:
                     self.clients.add(conn)
                     threading.Thread(target=self.handle_sse_client, args=(conn, addr)).start()
                 else:
-                    print("[SSE] Max clients reached, rejecting connection")
+                    print(f"[{self.NAME}] Max clients reached, rejecting connection")
                     conn.close()
 
         self.main_loop = main_loop.__get__(self)
@@ -36,10 +37,10 @@ class SSEServer:
         })
 
     def run(self):
-        setup_socket_connection(self.host, self.port, self.main_loop, "SSE", self.max_clients)
+        setup_socket_connection(self.host, self.port, self.main_loop, self.NAME, self.max_clients)
 
     def handle_sse_client(self, conn, addr):
-        origin, _ = recieve_request(conn, addr, "SSE")
+        origin, _ = recieve_request(conn, addr, self.NAME)
         headers = (
             "HTTP/1.1 200 OK\r\n"
             "Content-Type: text/event-stream\r\n"
@@ -66,13 +67,13 @@ class SSEServer:
                                 client.sendall(message.encode())
                                 is_sended = True
                         except (BrokenPipeError, ConnectionResetError, socket.timeout) as e:
-                            print(f"[SSE] {dt.datetime.now()} Disconnected by {addr}")
+                            print(f"[{self.NAME}] {dt.datetime.now()} Disconnected by {addr}")
                             self.clients.remove(client)
                     
                     if is_sended:
                         self.MESSAGES.popleft()
         except Exception as e:
-            print("[SSE] Client error:", e)
+            print(f"[{self.NAME}] Client error:", e)
         finally:
             with self.lock:
                 self.clients.discard(conn)

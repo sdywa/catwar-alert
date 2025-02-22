@@ -6,6 +6,8 @@ from modules.sse_server import SSEServer
 
 
 class Transmitter:
+    NAME = "RESENT"
+
     def __init__(self, host, port, config):
         self.host = host
         self.port = port
@@ -16,7 +18,7 @@ class Transmitter:
 
         def main_loop(self, s):
             conn, addr = s.accept()
-            origin, request = recieve_request(conn, addr, "RESENT")
+            origin, request = recieve_request(conn, addr, self.NAME)
             send_no_content(conn, origin)
 
             self.send_message(request)
@@ -33,7 +35,7 @@ class Transmitter:
     def run(self):
         threading.Thread(target=self.connect_to_sse).start()
         threading.Thread(target=self.awake_callback_server).start()
-        setup_socket_connection(self.host, self.port, self.main_loop, "RESENT")
+        setup_socket_connection(self.host, self.port, self.main_loop, self.NAME)
 
     def awake_callback_server(self):
         self.sse_server = SSEServer(self.host, self.port + 1)
@@ -43,7 +45,7 @@ class Transmitter:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
             host, port = self.server_data
             s.connect((host, port + 1))
-            print(f"[RESENT] Connected to {host}:{port} ...")
+            print(f"[{self.NAME}] Connected to {host}:{port} ...")
 
             request = (
                 "GET / HTTP/1.1\r\n"
@@ -69,5 +71,5 @@ class Transmitter:
                         if (chat == self.chat and message.strip()):
                             self.sse_server.add(chat, message)
                 except (socket.error, KeyboardInterrupt):
-                    print("[RESENT] Connection lost. Reconnecting...")
+                    print(f"[{self.NAME}] Connection lost. Reconnecting...")
                     break

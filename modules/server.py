@@ -12,6 +12,7 @@ class ServerType(Enum):
 
 
 class Server:
+    NAME = "MAIN"
     MESSAGES = set()
     CHATS = set()
 
@@ -42,7 +43,7 @@ class Server:
     def run(self):
         threading.Thread(target=self.awake_bot).start()
         threading.Thread(target=self.awake_callback_server).start()
-        setup_socket_connection(self.host, self.port, self.main_loop, "MAIN")
+        setup_socket_connection(self.host, self.port, self.main_loop, self.NAME)
 
     def awake_callback_server(self):
         self.sse_server = SSEServer(
@@ -61,7 +62,7 @@ class Server:
 
         data = {}
         if self.type == ServerType.DEFAULT:
-            origin, request = recieve_request(conn, addr, "MAIN")
+            origin, request = recieve_request(conn, addr, self.NAME)
             send_no_content(conn, origin)
 
             if not request:
