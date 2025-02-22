@@ -55,6 +55,16 @@ def read_config(file_path):
 
 def generate_config(file_path):
     inputs = {
+        "host": {
+            "text": "Введите адрес хоста",
+            "is_numeric": False,
+            "default": "127.0.0.1"
+        },
+        "port": {
+            "text": "Введите порт хоста",
+            "is_numeric": True,
+            "default": 20360
+        },
         "token": {
             "text": "Введите токен вашего бота",
             "is_numeric": False
@@ -70,9 +80,9 @@ def generate_config(file_path):
         },
     }
     questions = {
-        "d": [ "token", "chat" ],
-        "t": [ "server", "chat" ],
-        "s": [ "token" ]
+        "d": [ "host", "port", "token", "chat" ],
+        "t": [ "host", "port", "server", "chat" ],
+        "s": [ "host", "port", "token" ]
     }
 
     if not os.path.isfile(file_path):
@@ -112,14 +122,16 @@ if __name__ == "__main__":
 
     signal.signal(signal.SIGINT, signal.SIG_DFL)
     type = config.pop("type")
+    host = config.pop("host")
+    port = config.pop("port")
     if type == "t":
-        server = Transmitter("localhost", 20360, config)
+        server = Transmitter(host, port, config)
         server.run()
     else:
         server = Server(
             ServerType.DEFAULT if type == "d" else ServerType.MULTI_USER, 
-            "0.0.0.0", 
-            20360, 
+            host, 
+            port, 
             Bot, 
             config,
         )
