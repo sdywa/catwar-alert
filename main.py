@@ -118,7 +118,7 @@ if __name__ == "__main__":
     else:
         server = Server(
             ServerType.DEFAULT if type == "d" else ServerType.MULTI_USER, 
-            "localhost", 
+            "0.0.0.0", 
             20360, 
             Bot, 
             config,

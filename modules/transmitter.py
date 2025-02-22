@@ -62,8 +62,8 @@ class Transmitter:
                     if not data:
                         break
                     
-                    sse_message = data.decode()[6:]
-                    if (sse_message.strip()):
+                    sse_message = data.decode()[6:].strip()
+                    if (sse_message):
                         chat, message = json.loads(sse_message).values()
 
                         if (chat == self.chat and message.strip()):

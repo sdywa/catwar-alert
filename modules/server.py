@@ -45,7 +45,11 @@ class Server:
         setup_socket_connection(self.host, self.port, self.main_loop, "MAIN")
 
     def awake_callback_server(self):
-        self.sse_server = SSEServer(self.host, self.port + 1)
+        self.sse_server = SSEServer(
+            self.host, 
+            self.port + 1, 
+            1 if self.type == ServerType.DEFAULT else 5
+        )
         self.sse_server.run()
 
     def awake_bot(self):

@@ -29,11 +29,11 @@ def parse_request(request):
         return params
 
 
-def setup_socket_connection(host, port, main_loop_func, marker):
+def setup_socket_connection(host, port, main_loop_func, marker, max_clients=5):
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         s.bind((host, port))
-        s.listen(5)
+        s.listen(max_clients)
         print(f"[{marker}] Listening on port {port} ...")
         while True:
             try:
